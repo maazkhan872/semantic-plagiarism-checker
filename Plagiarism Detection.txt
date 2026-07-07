@@ -1,37 +1,92 @@
 import spacy
+import string
+from pathlib import Path
 
-# Load the spacy language model for English
-language_model = spacy.load("en_core_web_sm")
+# Load SpaCy model
+try:
+    nlp = spacy.load("en_core_web_sm")
+except OSError:
+    print("SpaCy English model not found.")
+    print("Run:")
+    print("python -m spacy download en_core_web_sm")
+    exit()
 
-def calculate_text_similarity(text1, text2):
-    
-    doc1 = language_model(text1)
-    doc2 = language_model(text2)
+
+def preprocess_text(text):
+    """
+    Cleans text by:
+    - converting to lowercase
+    - removing punctuation
+    - removing stopwords
+    """
+
+    doc = nlp(text.lower())
+
+    cleaned_words = [
+        token.lemma_
+        for token in doc
+        if not token.is_stop
+        and not token.is_punct
+        and not token.is_space
+    ]
+
+    return " ".join(cleaned_words)
+
+
+def calculate_similarity(text1, text2):
+
+    processed_text1 = preprocess_text(text1)
+    processed_text2 = preprocess_text(text2)
+
+    doc1 = nlp(processed_text1)
+    doc2 = nlp(processed_text2)
+
     return doc1.similarity(doc2)
 
-def evaluate_similarity(text_a, text_b, threshold=0.8):
-    
-    if not text_a.strip() or not text_b.strip():
-        raise ValueError("Error: One or both of the input texts are empty or consist only of whitespace.")
-    
-    similarity = calculate_text_similarity(text_a, text_b)
-    
-    if similarity >= threshold:
-        print(f"Similarity is high with a score of {similarity:.2f}. It exceeds the threshold of {threshold}.")
+
+def plagiarism_level(score):
+
+    if score >= 0.85:
+        return "HIGH"
+
+    elif score >= 0.60:
+        return "MEDIUM"
+
     else:
-        print(f"Similarity score is {similarity:.2f}, which does not meet the threshold of {threshold}.")
+        return "LOW"
 
-# Sample texts for similarity evaluation
-text_sample_1 = (
-    "Exploring the universe through telescopes has dramatically expanded our understanding of space. "
-    "From distant galaxies to the nuances of cosmic radiation, each observation contributes to the grand tapestry of "
-    "astronomical knowledge."
-)
-text_sample_2 = (
-    "Using telescopes to study the cosmos has profoundly changed our grasp of the universe. "
-    "Every new discovery, whether it’s about far-off galaxies or cosmic waves, adds a piece to the puzzle of our "
-    "knowledge about space."
-)
 
-# Perform similarity evaluation with a threshold of 0.6
-evaluate_similarity(text_sample_1, text_sample_2, threshold=0.7)
+def generate_report(text1, text2):
+
+    similarity = calculate_similarity(text1, text2)
+
+    percentage = similarity * 100
+
+    print("\n========== PLAGIARISM REPORT ==========")
+
+    print(f"Similarity Score : {similarity:.2f}")
+    print(f"Similarity       : {percentage:.2f}%")
+    print(f"Plagiarism Level : {plagiarism_level(similarity)}")
+
+    print("=======================================\n")
+
+
+def main():
+
+    print("====== Python Plagiarism Checker ======\n")
+
+    text1 = input("Enter First Text:\n\n")
+
+    print()
+
+    text2 = input("Enter Second Text:\n\n")
+
+    if not text1.strip() or not text2.strip():
+        print("Error: Empty text is not allowed.")
+        return
+
+    generate_report(text1, text2)
+
+
+if __name__ == "__main__":
+    main()
